@@ -1,0 +1,177 @@
+Sensitive Data Exposure
+
+Objective
+At the end of this exercise the you will be able to:
+ Execute several tools to help gather information about potential sensitive data exposure.
+ Identify common places to look for Sensitive Data.
+Scenario
+The OWASP project has put together a web application called Mutillidae that aids in the
+identification of open web vulnerabilities. In this exercise you will learn about A3: Sensitive Data
+Exposure from the 2017 OWASP Top Ten web vulnerabilities. (OWASP) and (Wallarm)
+Gather Data With Nikto
+
+Scenario
+A Sensitive Data Exposure is a general term that simply means exposure of data that
+should otherwise not be viewed by a regular user. This can include pages accessible to
+the general public that should be removed or backed up, hidden, development files,
+verbose error messages, and many other types of sensitive data. Currently, this is best
+to ensure that these files and data are removed from the web application, ensuring
+others are not able to view it. There are a lot of tools that can be used to find this
+information. The first one will look at first is Nikto, an industry standard. Nikto can do
+some vulnerability scanning, but in this exercise, we will focus on its ability to find
+sensitive data.
+Key Components:
+
+Get Started!
+1. Log in to the Kali machine with the username student and the password
+student.
+2. Click on the Terminal icon, the second from the top on the left-hand side
+dock. Maximize the Terminal window.
+3. Type the following command to launch Nikto on the mutillidae site:
+nikto -host http://mutillidae/mutillidae/
+
+The -host option expresses to Nikto which web server to test. In it, we can
+specify any URL. In this case, we specify both the hostname, and
+subdirectory. It will test to see if subdirectories are present, but it will not test
+for &quot;mutillidae&quot; as that is not a common directory present on web
+applications. When finished, run Nikto again without the mutillidae directory
+and compare the results from this run.
+
+4. When Nikto is finished. You will see a lot results, this is usually due to
+the vulnerability that is displayed a lot times, namely the Remote File
+Inclusion (RFI). In this example, you ignore the occurrences of the finding.
+Pay attention to the robots.txt file. This file is used to tell search engine
+spiders to ignore certain files and directories. This is why, it is good to keep
+sensitive information out of search engines, however listing them allows
+attackers to find them in search engines and crawlers to find them.
+
+5. Open Firefox and browse to http://mutillidae/mutillidae/robots.txt. The
+directories and files should be viewed to see if they contain anything
+interesting.
+Browsing to http://mutillidae/mutillidae/passwords/ will show that directory
+listing is turned on for that directory. This tells us the name of the file in that
+directory, accounts.txt. This file lists all the accounts, including unencrypted
+passwords.
+Other directories that contain very interesting information
+are phpmyadmin and includes. http://mutillidae/mutillidae/phpmyadmin/ is an
+interface through which you can administer the database, and this should
+never be accessible to the public.
+
+The http://mutillidae/mutillidae/includes/ directory contains, among other files,
+a config.inc file. Its contents can be viewed by viewing the source of the
+page when browsing to it (the data is contained as an HTML comment). You
+can view it by opening the browser to view-
+source:http://mutillidae/mutillidae/includes/config.inc.
+In this case, it does not matter, as it does not contain information that is used
+in the functioning of the application, but it could easily contain old credentials
+that are being reused somewhere else.
+
+6. Scrolling down more in the nikto findings, and we will see a list of
+directories that were found. Some contain interesting information, and some
+do not, but each should be checked. The data directory contains a single file
+accounts.xml, which is just an xml version of the document we already found
+in the passwords directory. We already reviewed the includes, passwords,
+and phpmyadmin directories. The test directory seems to contain nothing of
+importance.
+The next identified finding is phpinfo.php. This file is used to print diagnostic
+information, typically used to debug the server while constructing it. In a
+production site, however, it should NEVER be accessible. In the best case, it
+can leak sensitive information about the configuration of a web server that
+helps an attack craft an attack. In very bad situations, it can be chained
+together with other vulnerabilities to achieve remote code execution.
+
+7. Scroll all the way to the bottom of the Nikto findings and you will see a
+few more interesting directories.
+The webservices directory contains files and information related to the
+operation of the API. This may or may not be important to have on the site,
+depending on the target audience of the site.
+The .git directory, however, is most likely not needed. The git directory will
+likely contain all the code for the site and allow an attacker to clone the site.
+This will give access to not only the current source code, but also al lteh
+historical changes that have been made. Many times, developers hard code
+passwords into the application for development purposes but then remove it
+for production. However, using git to access the history will allow an attacker
+to view that change and see the passwords that were removed.
+This exercise will not walk through cloning the git repository, but feel free to
+pull down the directory and clone the repository and view the files. You can
+view the configuration files directly, including some password information.
+You can also view any historical changes that were made to the files.
+
+Gather Data with Dirbuster
+
+Scenario
+Nikto scans for common issues, but it will not find everythinghing. Dirbuster limited,
+however it will give a much broader view of what is contained on the website. Dirbuster
+uses a wordlist to scan for the existence of files and directories. If it is contained in the
+wordlist, it will be found by Dirbuster. In this instance, we will scan the web application
+with Dirbuster and see what it tells us.
+1. In the terminal window, execute the command:
+dirbuster
+It will open a GUI.
+2. In the Target URL text box, enter http://mutillidae/
+Move the Number of Threads Slider to 50.
+In the &quot;File with list of dirs/files&quot; navigate to /usr/share/wordlists/dirbuster/
+and select directory-list-2.3-medium.txt
+Uncheck &quot;Be Recursive&quot; near the bottom.
+Next to that, enter /mutillidae/ in the &quot;Dir to start with&quot; text box.
+Click Start to run it.
+
+3. Dirbuster will take some time to complete. However, at any time you can
+review what it has found so far. The complete list of files can be found under
+the &quot;Results - List View&quot; tab.
+If you go through, you will see that all of the sensitive files found by nikto are
+also present here. We did not find anything extra that is of immediate use.
+However, you can see that it found a large number of files and directories,
+some of which could hold sensitive information in a real web application.
+For instance, in typical applications, finding install.php could be an issue, as
+it may allow reinstallation and reconfiguration of credential information. In
+this case, installation.php only contains installation instructions.
+Close Dirbuster when finished.
+
+Gather Data with Verbose Error Message
+
+Scenario
+Lastly, we will investigate is overly verbose error messages. The general idea is that
+error messages can potentially contain a lot of sensitive information about how the
+application works and is put together.
+In this exercise, we will induce an error and see what information is displayed and see if
+that can be of aid to an attacker.
+1. Open the User Info page, by navigating to the OWAP 2017 -&gt; A1 -
+Injection (SQL) -&gt; SQLi Extract Data -&gt; User Info (SQL) menu item.
+
+2. Enter a single quote in the Name field and click View Account Details. An
+error will be displayed on the bottom of the page.
+
+3. There are a few interesting pieces of information contained in the error.
+First, it tells us there is an error in our SQL syntax. This tells us right away
+that the page is vulnerable to SQL Injection, which is covered in a separate
+module. However, it also shows us the exact SQL query that is being used,
+with our input pasted into place. This can be useful in successfully launching
+a SQL injection attack.
+However, the error also tells us that the application is using MySQL and that
+the client version is 5.5.54.
+It also contains a stack trace, which gives information about how the
+application is built and structured.
+
+Gather Data from HTML Comments
+
+Scenario
+HTML, along with all programming languages, provides the ability to include comments.
+The main difference in web applications with HTML is that the comments are delivered
+to the client browser along with all the regular content. If any sensitive information is
+included in an HTML comment, that will be shown to the client if they choose to look.
+1. Open the HTML/Javascript Commentspage, by navigating to the OWAP
+2017 -&gt; A3 - Sensitive Data Exposure -&gt; Information Disclosure-&gt;
+HTML/Javascript Comments menu item.
+
+2. Right click on the page and select View Page Source.
+
+3. Scroll almost the entire way down to view the potentially sensitive HTML
+comment. It starts at line 1040. As you can see, it contains information about
+the database password. HTML comments are not a safe place to store
+sensitive data, as they can be viewed by the end user.
+Paste the password into the file on the desktop entitled database_password
+
+That’s it, Great Job. To learn more walk back through the exercise looking up things of
+interest on your favorite search engine. Our goal here is for you to build Confidence ‘N’
+Technology.
